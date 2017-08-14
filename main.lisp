@@ -1,7 +1,28 @@
 
+(ql:quickload 'ieee-floats)
 
-(defun read-chunk (path &optional (start 0) (count 512))
-  "Read a chunk of unsigned bytes from a file. START can be negative and indicates
+
+(defun read-chunk (stream &optional (start 0) (count 512))
+  "Rpead a chunk of unsigned bytes from a file stream. START can be negative and indicates
+an offset from the end of the file"
+  (let ((buffer (make-array `(,count) :element-type '(unsigned-byte 8))))
+
+    ;; Handle negative start
+    (when (< start 0)
+      (setf start (+ (file-length stream) start)))
+
+    (file-position stream start)
+
+    ;; Read as far as possible, then pad with zeroes
+    (loop for i from (read-sequence buffer stream)
+       below (length buffer)
+       do (setf (aref buffer i) 0))
+      
+    buffer))
+
+
+(defun read-chunk-from-file (path &optional (start 0) (count 512))
+  "Rpead a chunk of unsigned bytes from a file. START can be negative and indicates
 an offset from the end of the file"
   (with-open-file (in path :element-type '(unsigned-byte 8))
     (let ((buffer (make-array `(,count) :element-type '(unsigned-byte 8))))
@@ -74,7 +95,7 @@ an offset from the end of the file"
   (make-array `(,(length foo)) :initial-contents foo))
 
 
-(find-strings (loop for c across (read-chunk "Main.class") collect c))
+(find-strings (loop for c across (read-chunk-from-file "Main.class") collect c))
 
 (mapcar #'first opcodes)
 
@@ -101,6 +122,17 @@ ored together. BIG ENDIAN"
     (number-from-bytes buffer count)))
 
 
+(defun read-signed-int (stream count)
+  "Read an signed integer from the stream, consisting of COUNT shifted unsigned bytes
+ored together. BIG ENDIAN twos complement"
+  (let ((buffer (make-array `(,count)
+                            :element-type '(signed-byte 8))))
+    (unless (eql count (read-sequence buffer stream :end count))
+      (error "Expected to read ~a unsigned bytes" count))
+    
+    (number-from-bytes buffer count)))
+
+
 (defun read-string (stream length)
   "Read a UTF-8 encoded string consisting of LENGTH bytes"
   ;;(declare (optimize debug))
@@ -120,6 +152,28 @@ ored together. BIG ENDIAN"
   "Read an entry from the constant pool entry table"
   (let ((string (read-string stream (read-unsigned-int stream 2))))
     `(:string ,string)))
+
+
+(defun read-constant-pool-integer-entry (stream)
+  "Read an entry from the constant pool entry table"
+  (let ((int (read-signed-int stream 4)))
+    `(:integer ,int)))
+
+(defun read-constant-pool-long-entry (stream)
+  "Read an entry from the constant pool entry table"
+  (let ((int (read-signed-int stream 8)))
+    `(:long ,int)))
+
+(defun read-constant-pool-float-entry (stream)
+  "Read an entry from the constant pool entry table"
+  (let ((uint (read-unsigned-int stream 4)))
+    `(:float ,(ieee-floats:decode-float32 uint))))
+
+
+(defun read-constant-pool-double-entry (stream)
+  "Read an entry from the constant pool entry table"
+  (let ((uint (read-unsigned-int stream 8)))
+    `(:double ,(ieee-floats:decode-float64 uint))))
 
 
 (defun read-constant-pool-method-reference (stream)
@@ -155,6 +209,27 @@ ored together. BIG ENDIAN"
     `(:type-descriptor ,name-ix ,type-ix)))
 
 
+(defun read-constant-pool-method-handle (stream)
+  "Read an entry from the constant pool entry table"
+  (let* ((type-descriptor (read-unsigned-int stream 8))
+         (index (read-unsigned-int stream 2)))
+    `(:method-handle ,type-descriptor ,index)))
+
+
+(defun read-constant-pool-method-type (stream)
+  "Read an entry from the constant pool entry table"
+  (let* ((index (read-unsigned-int stream 2)))
+    `(:method-type ,index)))
+
+
+(defun read-constant-pool-invoke-dynamic (stream)
+  "Read an entry from the constant pool entry table"
+  (declare (ignore stream))
+  (cerror "Use placeholder"
+          "Invoke dynamic constant pool entries currently unsupported")
+  '(:invoke-dynamic-placeholder))
+
+
 (defun resolve-constant-references (entry table)
   (loop for item in entry collect
        (if (numberp item)
@@ -170,16 +245,23 @@ ored together. BIG ENDIAN"
                                             table)))
     table))
 
+
 (defun read-constant-pool-entry (stream)
   "Read an entry from the constant pool entry table"
   (let ((tag (read-unsigned-int stream 1)))
     (ecase tag
       (1 (read-constant-pool-string-entry stream))
+      (3 (read-constant-pool-integer-entry stream))
+      (4 (read-constant-pool-float-entry stream))
+      (5 (read-constant-pool-long-entry stream))
+      (6 (read-constant-pool-double-entry stream))
       (7 (read-constant-pool-class-reference stream))
       (8 (read-constant-pool-string-reference stream))
       (9 (read-constant-pool-field-reference stream))
       (10 (read-constant-pool-method-reference stream))
-      (12 (read-constant-pool-type-decriptor stream)))))
+      (12 (read-constant-pool-type-decriptor stream))
+      (15 (read-constant-pool-method-handle stream))
+      (16 (read-constant-pool-invoke-dynamic stream)))))
 
 
 ;; See https://en.wikipedia.org/wiki/Class_(file_format)#File_layout_and_structure
