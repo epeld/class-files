@@ -296,6 +296,18 @@ ored together. BIG ENDIAN twos complement"
     `(:field ,access-flags ,name-index ,descriptor-index ,attributes)))
 
 
+(defun read-method (stream)
+  "Read a method_info structure"
+  (let* ((access-flags (read-unsigned-int stream 2))
+         (name-index (read-unsigned-int stream 2))
+         (descriptor-index (read-unsigned-int stream 2))
+         (attributes-count (read-unsigned-int stream 2))
+         (attributes (loop for i from 1 upto attributes-count collect
+                          (read-attribute stream))))
+
+    `(:method ,access-flags ,name-index ,descriptor-index ,attributes)))
+
+
 ;; See https://en.wikipedia.org/wiki/Class_(file_format)#File_layout_and_structure
 (defun parse-class-stream (stream)
   (declare (optimize debug))
@@ -308,6 +320,10 @@ ored together. BIG ENDIAN twos complement"
         interfaces
         fields-count
         fields
+        methods-count
+        methods
+        attributes-count
+        attributes
         this-class-ix
         super-class-ix)
 
@@ -354,9 +370,17 @@ ored together. BIG ENDIAN twos complement"
     (setf fields-count (read-unsigned-int stream 2))
     (setf fields
           (loop for i from 1 upto fields-count collect (read-field stream)))
-    ;; TODO read interface table!
+
+    (setf methods-count (read-unsigned-int stream 2))
+    (setf methods
+          (loop for i from 1 upto methods-count collect (read-method stream)))
+
+
+    (setf attributes-count (read-unsigned-int stream 2))
+    (setf attributes
+          (loop for i from 1 upto attributes-count collect (read-attribute stream)))
     
-    `(,major ,minor ,constants ,interfaces ,fields)
+    `(,major ,minor ,constants ,interfaces ,fields ,methods ,attributes)
     ))
 
 
@@ -405,3 +429,20 @@ ored together. BIG ENDIAN twos complement"
     (:synthetic . #x1000)
     (:enum . #x4000))
   "Constants from Java VM Spec document (access flags for fields)")
+
+
+(defvar method-access-flag-alist
+  '((:public . #x0001)
+    (:private . #x0002)
+    (:protected . #x0004)
+    (:static . #x0008)
+    (:final . #x0010)
+    (:synchronized . #x0020)
+    (:bridge . #x0040)
+    (:varargs . #x0080)
+    (:native . #x0100)
+    (:abstract . #x0400)
+    (:strict . #x0800)
+    (:synthetic . #x1000)
+    )
+  "Constants from Java VM Spec document (access flags for methods)")
