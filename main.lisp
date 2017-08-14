@@ -2,16 +2,10 @@
 (ql:quickload 'ieee-floats)
 
 
-(defun read-chunk (stream &optional (start 0) (count 512))
+(defun read-chunk (stream &optional (count 512))
   "Rpead a chunk of unsigned bytes from a file stream. START can be negative and indicates
 an offset from the end of the file"
   (let ((buffer (make-array `(,count) :element-type '(unsigned-byte 8))))
-
-    ;; Handle negative start
-    (when (< start 0)
-      (setf start (+ (file-length stream) start)))
-
-    (file-position stream start)
 
     ;; Read as far as possible, then pad with zeroes
     (loop for i from (read-sequence buffer stream)
@@ -21,7 +15,7 @@ an offset from the end of the file"
     buffer))
 
 
-(defun read-chunk-from-file (path &optional (start 0) (count 512))
+(defun read-chunk-from-file (path &optional (count 512))
   "Rpead a chunk of unsigned bytes from a file. START can be negative and indicates
 an offset from the end of the file"
   (with-open-file (in path :element-type '(unsigned-byte 8))
@@ -88,7 +82,7 @@ an offset from the end of the file"
     (when found
       (push (coerce (reverse found) 'string) result))
 
-    (reverse result))))
+    (reverse result)))
 
 
 (let ((foo ))
@@ -101,25 +95,32 @@ an offset from the end of the file"
 
 (first opcodes)
 
-(defparameter magic-number '(#xca #xfe #xba #xbe)
+(defparameter magic-number #xcafebabe)
   "Java magic number")
 
-(defun number-from-bytes (buffer count)
+
+(defun number-from-bytes (buffer &optional (count (length buffer)))
   (let ((number 0))
     (loop for i from 0 below count do
-         (setf number (logior number (aref buffer i)))
+         (setf number (logior number (ash (aref buffer i) (* 8 (- count i 1)))))
        finally (return number))))
 
 
 (defun read-unsigned-int (stream count)
   "Read an unsigned integer from the stream, consisting of COUNT shifted unsigned bytes
 ored together. BIG ENDIAN"
+  (declare (optimize debug))
   (let ((buffer (make-array `(,count)
                             :element-type '(unsigned-byte 8))))
     (unless (eql count (read-sequence buffer stream :end count))
       (error "Expected to read ~a unsigned bytes" count))
+
     
-    (number-from-bytes buffer count)))
+    (let ((x (number-from-bytes buffer count)))
+      (when (and nil (< 10000 x))
+        (break "BIG NR"))
+
+      x)))
 
 
 (defun read-signed-int (stream count)
@@ -146,6 +147,10 @@ ored together. BIG ENDIAN twos complement"
          (setf (aref buffer ix) (code-char (aref buffer ix))))
     
     (coerce buffer 'string)))
+
+(defun read-length-string (stream)
+  "Read a length followed by a utf-8-like string"
+  (read-string stream (read-unsigned-int stream 2)))
 
 
 (defun read-constant-pool-string-entry (stream)
@@ -264,28 +269,54 @@ ored together. BIG ENDIAN twos complement"
       (16 (read-constant-pool-invoke-dynamic stream)))))
 
 
+(defun read-utf8-info (stream)
+  (let* ((tag (read-unsigned-int stream 1)))
+    `(:utf8 ,tag ,(read-length-string stream))))
+
+
+(defun read-attribute (stream)
+  ;;(declare (optimize debug))
+  (let ((name-index (read-unsigned-int stream 2))
+        (length (read-unsigned-int stream 4)))
+
+    `(:attribute ,name-index ,(read-chunk stream length))))
+
+
+(defun read-field (stream)
+  "Read a field_info structure"
+;;  (declare (optimize debug))
+  (let* ((access-flags (read-unsigned-int stream 2))
+         (name-index (read-unsigned-int stream 2))
+         (descriptor-index (read-unsigned-int stream 2))
+         (attributes-count (read-unsigned-int stream 2))
+         ;;(foo (break "HERE"))
+         (attributes (loop for i from 1 upto attributes-count collect
+                          (read-attribute stream))))
+
+    `(:field ,access-flags ,name-index ,descriptor-index ,attributes)))
+
+
 ;; See https://en.wikipedia.org/wiki/Class_(file_format)#File_layout_and_structure
 (defun parse-class-stream (stream)
+  (declare (optimize debug))
   (let (major
         minor
         constant-pool-count
         constants
         access-flags
         interface-count
+        interfaces
+        fields-count
+        fields
         this-class-ix
-        super-class-ix
-              
-        (buffer (make-array '(4048)
-                            :initial-element 0
-                            :element-type '(unsigned-byte 8))))
+        super-class-ix)
 
     
     ;; Magic number checking 4 bytes
-    (read-sequence buffer stream :end (length magic-number))
-    (unless (search magic-number buffer
-                    :end1 (length magic-number)
-                    :end2 (length magic-number))
-      (error "Not a class file"))
+    (let ((number (read-unsigned-int stream 4)))
+      (unless (eql magic-number number)
+        (error "Not a class file ~a ~a" magic-number number)))
+    
 
 
     ;; Minor version 2 bytes
@@ -317,14 +348,16 @@ ored together. BIG ENDIAN twos complement"
 
     ;; Interface count
     (setf interface-count (read-unsigned-int stream 2))
+    (setf interfaces
+          (loop for i from 1 upto interface-count collect (read-unsigned-int stream 2)))
 
+    (setf fields-count (read-unsigned-int stream 2))
+    (setf fields
+          (loop for i from 1 upto fields-count collect (read-field stream)))
     ;; TODO read interface table!
     
-    `(,major ,minor ,constants)
-    )
-
-  
-  )
+    `(,major ,minor ,constants ,interfaces ,fields)
+    ))
 
 
 (defun parse-class-file (path)
@@ -332,6 +365,7 @@ ored together. BIG ENDIAN twos complement"
     (parse-class-stream in)))
 
 (parse-class-file "Main.class")
+(parse-class-file "Sample.class")
 
 
 (defvar raw-table
@@ -346,3 +380,28 @@ ored together. BIG ENDIAN twos complement"
     (:STRING "java/lang/System") (:STRING "out")
     (:STRING "Ljava/io/PrintStream;") (:STRING "java/io/PrintStream")
     (:STRING "println") (:STRING "(Ljava/lang/String;)V")))
+
+
+(defvar class-access-flag-alist
+  '((:public . #x0001)
+    (:final . #x0010)
+    (:super . #x0020)
+    (:interface . #x0200)
+    (:abstract . #x0400)
+    (:synthetic . #x1000)
+    (:annotation . #x2000)
+    (:enum . #x4000))
+  "Constants from Java VM Spec document (access flags classes)")
+
+
+(defvar field-access-flag-alist
+  '((:public . #x0001)
+    (:private . #x0002)
+    (:protected . #x0004)
+    (:static . #x0008)
+    (:final . #x0010)
+    (:volatile . #x0040)
+    (:transient . #x0080)
+    (:synthetic . #x1000)
+    (:enum . #x4000))
+  "Constants from Java VM Spec document (access flags for fields)")
