@@ -388,6 +388,29 @@ ored together. BIG ENDIAN twos complement"
   (with-open-file (in path :element-type '(unsigned-byte 8))
     (parse-class-stream in)))
 
+
+(defun read-exception-table-entry (stream)
+  (let* ((start-pc (read-unsigned-int stream 2))
+         (end-pc (read-unsigned-int stream 2))
+         (handler-pc (read-unsigned-int stream 2))
+         (catch-type (read-unsigned-int stream 2)))
+    `(:exception-table-entry ,start-pc ,end-pc ,handler-pc ,catch-type)))
+
+
+(defun parse-code-attribute (stream)
+  (let* ((name-index (read-unsigned-int stream 2))
+         (attr-length (read-unsigned-int stream 4))
+         (max-stack (read-unsigned-int stream 2))
+         (max-locals (read-unsigned-int stream 2))
+         (code-length (read-unsigned-int stream 4))
+         (code (read-chunk stream code-length))
+         (exception-table-length (read-unsigned-int stream 2))
+         (exception-table (loop for i from 1 upto exception-table-length collect (read-exception-table-entry stream)))
+         (attr-count (read-unsigned-int stream 2))
+         (attrs (loop for i from 1 upto attr-count collect (read-attribute stream))))
+
+    `(:code ,name-index ,attr-length ,max-stack ,max-locals ,code ,exception-table ,attrs)))
+
 (parse-class-file "Main.class")
 (parse-class-file "Sample.class")
 
