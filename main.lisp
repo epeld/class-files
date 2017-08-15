@@ -308,6 +308,29 @@ ored together. BIG ENDIAN twos complement"
     `(:method ,access-flags ,name-index ,descriptor-index ,attributes)))
 
 
+(defclass class-info ()
+  ((major :accessor class-major-version
+          :initarg :major)
+   (minor :accessor class-minor-version
+          :initarg :minor)
+   (constants :accessor :class-constants
+              :initarg :constants)
+   (access-flags :accessor :class-access-flags
+                 :initarg :access-flags)
+   (interfaces :accessor class-interfaces
+               :initarg :interfaces)
+   (fields :accessor class-fields
+           :initarg :fields)
+   (methods :accessor class-methods
+            :initarg :methods)
+   (attributes :accessor class-attributes
+               :initarg :attributes)
+   (this-class-index :accessor class-this-index
+                  :initarg :this-index)
+   (super-class-index :accessor class-super-index
+                  :initarg :super-index))
+  (:documentation "Represents a java class file"))
+
 ;; See https://en.wikipedia.org/wiki/Class_(file_format)#File_layout_and_structure
 (defun parse-class-stream (stream)
   (declare (optimize debug))
@@ -379,9 +402,15 @@ ored together. BIG ENDIAN twos complement"
     (setf attributes-count (read-unsigned-int stream 2))
     (setf attributes
           (loop for i from 1 upto attributes-count collect (read-attribute stream)))
-    
-    `(,major ,minor ,constants ,interfaces ,fields ,methods ,attributes)
-    ))
+
+    (make-instance 'class-info
+                   :major major
+                   :minor minor
+                   :constants constants
+                   :interfaces interfaces
+                   :fields fields
+                   :methods methods
+                   :attributes attributes)))
 
 
 (defun parse-class-file (path)
@@ -413,6 +442,9 @@ ored together. BIG ENDIAN twos complement"
 
 (parse-class-file "Main.class")
 (parse-class-file "Sample.class")
+
+(defun referenced-classes (class-info)
+  )
 
 
 (defvar raw-table
