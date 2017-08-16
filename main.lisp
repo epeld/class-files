@@ -308,14 +308,14 @@ ored together. BIG ENDIAN twos complement"
     `(:method ,access-flags ,name-index ,descriptor-index ,attributes)))
 
 
-(defclass class-info ()
+(defclass java-class ()
   ((major :accessor class-major-version
           :initarg :major)
    (minor :accessor class-minor-version
           :initarg :minor)
-   (constants :accessor :class-constants
+   (constants :accessor class-constants
               :initarg :constants)
-   (access-flags :accessor :class-access-flags
+   (access-flags :accessor class-access-flags
                  :initarg :access-flags)
    (interfaces :accessor class-interfaces
                :initarg :interfaces)
@@ -403,7 +403,7 @@ ored together. BIG ENDIAN twos complement"
     (setf attributes
           (loop for i from 1 upto attributes-count collect (read-attribute stream)))
 
-    (make-instance 'class-info
+    (make-instance 'java-class
                    :major major
                    :minor minor
                    :constants constants
@@ -440,8 +440,23 @@ ored together. BIG ENDIAN twos complement"
 
     `(:code ,name-index ,attr-length ,max-stack ,max-locals ,code ,exception-table ,attrs)))
 
+
+(defclass java-method ()
+  ((access-flags :accessor method-access-flags
+                 :initarg :access-flags)
+   (name :accessor method-name
+         :initarg :name)
+   (descriptor :accessor method-descriptor
+               :initarg :descriptor)
+   (attributes :accessor method-attributes
+               :initarg :attributes))
+  (:documentation "Represents a method of a Java class"))
+
+
 (parse-class-file "Main.class")
-(parse-class-file "Sample.class")
+(let ((class (parse-class-file "Sample.class")))
+  (list (class-methods class)
+        (class-constants class)))
 
 (defun referenced-classes (class-info)
   )
