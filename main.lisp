@@ -454,12 +454,17 @@ ored together. BIG ENDIAN twos complement"
 
 
 (parse-class-file "Main.class")
-(let ((class (parse-class-file "Sample.class")))
+(let ((class (parse-class-file "Main.class")))
   (list (class-methods class)
-        (class-constants class)))
+        (class-constants class)
+        (referenced-classes class)))
 
 (defun referenced-classes (class-info)
-  )
+  (declare (optimize debug))
+  (let ((constants (class-constants class-info)))
+    (loop for ref across constants
+       when (eq :class-reference (first ref))
+       collect (cadr (aref constants (1- (second ref)))))))
 
 
 (defvar raw-table
