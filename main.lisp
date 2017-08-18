@@ -102,9 +102,6 @@ ored together. BIG ENDIAN"
     (unless (eql count (read-sequence buffer stream :end count))
       (error "Expected to read ~a unsigned bytes" count))
 
-    (when (and (eq count 4) (< 10000 (number-from-bytes buffer count))
-               (not (eq (number-from-bytes buffer count) magic-number)))
-      (break))
     (number-from-bytes buffer count)))
 
 
@@ -245,19 +242,17 @@ ored together. BIG ENDIAN twos complement"
   "Read an entry from the constant pool entry table"
   (let ((tag (read-unsigned-int stream 1)))
     (cond ((eql tag 5)
-           (list nil (read-constant-pool-long-entry stream)))
+           (list (read-constant-pool-long-entry stream) nil))
 
-          ((eql tag 4)
-           (list nil (read-constant-pool-float-entry stream)))
+          ((eql tag 6)
+           (list (read-constant-pool-double-entry stream) nil))
 
           (t
            (list
             (ecase tag
               (1 (read-constant-pool-string-entry stream))
               (3 (read-constant-pool-integer-entry stream))
-              (4 )
-              (5 )
-              (6 (read-constant-pool-double-entry stream))
+              (4 (read-constant-pool-float-entry stream))
               (7 (read-constant-pool-class-reference stream))
               (8 (read-constant-pool-string-reference stream))
               (9 (read-constant-pool-field-reference stream))
@@ -377,6 +372,8 @@ ored together. BIG ENDIAN twos complement"
          until
            (>= index constant-pool-count))
 
+      (assert (eql (length entries) (1- constant-pool-count)))
+      
       (setf entries (nreverse (loop for entry in entries nconc entry)))
 
       (setf constants
@@ -420,7 +417,9 @@ ored together. BIG ENDIAN twos complement"
                    :interfaces interfaces
                    :fields fields
                    :methods methods
-                   :attributes attributes)))
+                   :attributes attributes
+                   :this-index this-class-ix
+                   :super-index super-class-ix)))
 
 
 (defun parse-class-file (path)
@@ -462,33 +461,6 @@ ored together. BIG ENDIAN twos complement"
                :initarg :attributes))
   (:documentation "Represents a method of a Java class"))
 
-
-(defun referenced-classes (class-info)
-  (declare (optimize debug))
-  (let ((constants (class-constants class-info)))
-    (loop for ref across constants
-       when (eq :class-reference (first ref))
-       collect (cadr (aref constants (1- (second ref)))))))
-
-(parse-class-file "Main.class")
-(let ((class (parse-class-file "Main.class")))
-  (list (class-methods class)
-        (class-constants class)
-        (referenced-classes class)))
-
-
-(defvar raw-table
-  '((:METHOD-REFERENCE 6 15) (:FIELD-REFERENCE 16 17) (:STRING-REFERENCE 18)
-    (:METHOD-REFERENCE 19 20) (:CLASS-REFERENCE 11) (:CLASS-REFERENCE 21)
-    (:STRING "<init>") (:STRING "()V") (:STRING "Code")
-    (:STRING "LineNumberTable") (:STRING "Main")
-    (:STRING "([Ljava/lang/String;)V") (:STRING "SourceFile")
-    (:STRING "Main.java") (:TYPE-DESCRIPTOR 7 8) (:CLASS-REFERENCE 22)
-    (:TYPE-DESCRIPTOR 23 24) (:STRING "HELLO") (:CLASS-REFERENCE 25)
-    (:TYPE-DESCRIPTOR 26 27) (:STRING "java/lang/Object")
-    (:STRING "java/lang/System") (:STRING "out")
-    (:STRING "Ljava/io/PrintStream;") (:STRING "java/io/PrintStream")
-    (:STRING "println") (:STRING "(Ljava/lang/String;)V")))
 
 
 (defvar class-access-flag-alist
