@@ -500,3 +500,11 @@ ored together. BIG ENDIAN twos complement"
     (:synthetic . #x1000)
     )
   "Constants from Java VM Spec document (access flags for methods)")
+
+(defun decode-class-access-flags (flags)
+  (loop for pair in class-access-flag-alist
+     when (not (zerop (logand flags (cdr pair)))) collect (car pair)))
+
+(defun decode-field-access-flags (flags)
+  (loop for pair in field-access-flag-alist
+       when (not (zerop (logand flags (cdr pair)))) collect (car pair)))
