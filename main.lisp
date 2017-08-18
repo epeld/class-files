@@ -105,8 +105,7 @@ ored together. BIG ENDIAN"
 (defun read-signed-int (stream count)
   "Read an signed integer from the stream, consisting of COUNT shifted unsigned bytes
 ored together. BIG ENDIAN twos complement"
-  (let ((buffer (make-array `(,count)
-                            :element-type '(signed-byte 8))))
+  (let ((buffer (make-array `(,count))))
     (unless (eql count (read-sequence buffer stream :end count))
       (error "Expected to read ~a unsigned bytes" count))
     
@@ -165,6 +164,12 @@ ored together. BIG ENDIAN twos complement"
   (let* ((class-ix (read-unsigned-int stream 2))
          (name-ix (read-unsigned-int stream 2)))
     `(:method-reference ,class-ix ,name-ix)))
+
+(defun read-constant-pool-interface-method-reference (stream)
+  "Read an entry from the constant pool entry table"
+  (let* ((class-ix (read-unsigned-int stream 2))
+         (name-ix (read-unsigned-int stream 2)))
+    `(:interface-method-reference ,class-ix ,name-ix)))
 
 
 (defun read-constant-pool-field-reference (stream)
