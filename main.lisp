@@ -21,12 +21,6 @@ an offset from the end of the file"
   (with-open-file (in path :element-type '(unsigned-byte 8))
     (let ((buffer (make-array `(,count) :element-type '(unsigned-byte 8))))
 
-      ;; Handle negative start
-      (when (< start 0)
-        (setf start (+ (file-length in) start)))
-
-      (file-position in start)
-
       ;; Read as far as possible, then pad with zeroes
       (loop for i from (read-sequence buffer in)
          below (length buffer)
@@ -37,14 +31,6 @@ an offset from the end of the file"
 
 (defparameter example-chunk (read-chunk "Main.class"))
 
-
-
-(loop for x across (read-chunk "Main.class")
-              if 
-              collect
-                (code-char x)
-              else
-   collect x)
 
 
 (defun asciip (x)
@@ -95,7 +81,7 @@ an offset from the end of the file"
 
 (first opcodes)
 
-(defparameter magic-number #xcafebabe)
+(defparameter magic-number #xcafebabe
   "Java magic number")
 
 
@@ -115,12 +101,7 @@ ored together. BIG ENDIAN"
     (unless (eql count (read-sequence buffer stream :end count))
       (error "Expected to read ~a unsigned bytes" count))
 
-    
-    (let ((x (number-from-bytes buffer count)))
-      (when (and nil (< 10000 x))
-        (break "BIG NR"))
-
-      x)))
+    (number-from-bytes buffer count)))
 
 
 (defun read-signed-int (stream count)
