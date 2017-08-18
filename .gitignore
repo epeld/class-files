@@ -1,2 +1,6 @@
 *~
 *.fasl
+*.png
+*.svg
+*.dot
+*.dot\#
