@@ -59,9 +59,11 @@
 
 (defun referenced-classes (class-info)
   (let ((constants (class-constants class-info)))
-    (loop for ref across constants
-       when (java-class-reference-p ref)
-       collect (cadr (aref constants (1- (second ref)))))))
+    (remove-duplicates
+     (loop for ref across constants
+        when (java-class-reference-p ref)
+        collect (cadr (aref constants (1- (second ref)))))
+     :test #'string=)))
 
 
 (defun dot-graph (classes &optional (path "graph.dot"))
@@ -81,7 +83,8 @@
            (loop for ref in (referenced-classes class) do
                 (let ((ref-ix (search (list ref)
                                       names :test #'string=)))
-                  (when ref-ix
+                  (when (and ref-ix
+                             (not (eq ref-ix class-ix)))
                     (format out "C_~a -> C_~a~%" class-ix
                             ref-ix))))))
       (format out "~%}~%"))))
