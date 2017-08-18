@@ -238,19 +238,28 @@ ored together. BIG ENDIAN twos complement"
 (defun read-constant-pool-entry (stream)
   "Read an entry from the constant pool entry table"
   (let ((tag (read-unsigned-int stream 1)))
-    (ecase tag
-      (1 (read-constant-pool-string-entry stream))
-      (3 (read-constant-pool-integer-entry stream))
-      (4 (read-constant-pool-float-entry stream))
-      (5 (read-constant-pool-long-entry stream))
-      (6 (read-constant-pool-double-entry stream))
-      (7 (read-constant-pool-class-reference stream))
-      (8 (read-constant-pool-string-reference stream))
-      (9 (read-constant-pool-field-reference stream))
-      (10 (read-constant-pool-method-reference stream))
-      (12 (read-constant-pool-type-decriptor stream))
-      (15 (read-constant-pool-method-handle stream))
-      (16 (read-constant-pool-invoke-dynamic stream)))))
+    (cond ((eql tag 5)
+           (list nil (read-constant-pool-long-entry stream)))
+
+          ((eql tag 4)
+           (list nil (read-constant-pool-float-entry stream)))
+
+          (t
+           (list
+            (ecase tag
+              (1 (read-constant-pool-string-entry stream))
+              (3 (read-constant-pool-integer-entry stream))
+              (4 )
+              (5 )
+              (6 (read-constant-pool-double-entry stream))
+              (7 (read-constant-pool-class-reference stream))
+              (8 (read-constant-pool-string-reference stream))
+              (9 (read-constant-pool-field-reference stream))
+              (10 (read-constant-pool-method-reference stream))
+              (11 (read-constant-pool-interface-method-reference stream))
+              (12 (read-constant-pool-type-decriptor stream))
+              (15 (read-constant-pool-method-handle stream))
+              (16 (read-constant-pool-invoke-dynamic stream))))))))
 
 
 (defun read-utf8-info (stream)
