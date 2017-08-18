@@ -5,6 +5,9 @@
 (defun read-chunk (stream &optional (count 512))
   "Rpead a chunk of unsigned bytes from a file stream. START can be negative and indicates
 an offset from the end of the file"
+  (unless (< count 100000)
+    (error "Too high count ~a" count))
+  
   (let ((buffer (make-array `(,count) :element-type '(unsigned-byte 8))))
 
     ;; Read as far as possible, then pad with zeroes
@@ -99,6 +102,9 @@ ored together. BIG ENDIAN"
     (unless (eql count (read-sequence buffer stream :end count))
       (error "Expected to read ~a unsigned bytes" count))
 
+    (when (and (eq count 4) (< 10000 (number-from-bytes buffer count))
+               (not (eq (number-from-bytes buffer count) magic-number)))
+      (break))
     (number-from-bytes buffer count)))
 
 
