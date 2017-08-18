@@ -29,7 +29,7 @@ an offset from the end of the file"
       buffer)))
 
 
-(defparameter example-chunk (read-chunk "Main.class"))
+(defparameter example-chunk (read-chunk-from-file "Main.class"))
 
 
 
@@ -63,8 +63,6 @@ an offset from the end of the file"
             (t
              (push c result))))
 
-    (cerror "HERE" "SDS")
-    
     (when found
       (push (coerce (reverse found) 'string) result))
 
@@ -434,18 +432,18 @@ ored together. BIG ENDIAN twos complement"
   (:documentation "Represents a method of a Java class"))
 
 
-(parse-class-file "Main.class")
-(let ((class (parse-class-file "Main.class")))
-  (list (class-methods class)
-        (class-constants class)
-        (referenced-classes class)))
-
 (defun referenced-classes (class-info)
   (declare (optimize debug))
   (let ((constants (class-constants class-info)))
     (loop for ref across constants
        when (eq :class-reference (first ref))
        collect (cadr (aref constants (1- (second ref)))))))
+
+(parse-class-file "Main.class")
+(let ((class (parse-class-file "Main.class")))
+  (list (class-methods class)
+        (class-constants class)
+        (referenced-classes class)))
 
 
 (defvar raw-table
