@@ -313,21 +313,21 @@ ored together. BIG ENDIAN twos complement"
 ;; See https://en.wikipedia.org/wiki/Class_(file_format)#File_layout_and_structure
 (defun parse-class-stream (stream)
   (declare (optimize debug))
-  (let (major
-        minor
-        constant-pool-count
-        constants
-        access-flags
-        interface-count
-        interfaces
-        fields-count
-        fields
-        methods-count
-        methods
-        attributes-count
-        attributes
-        this-class-ix
-        super-class-ix)
+  (let* (major
+         minor
+         constant-pool-count
+         constants
+         access-flags
+         interface-count
+         interfaces
+         fields-count
+         fields
+         methods-count
+         methods
+         attributes-count
+         attributes
+         this-class-ix
+         super-class-ix)
 
     
     ;; Magic number checking 4 bytes
@@ -346,8 +346,19 @@ ored together. BIG ENDIAN twos complement"
 
     ;; Constant pool count 2 bytes
     (setf constant-pool-count (read-unsigned-int stream 2))
-    (let ((entries (loop for index from 1 below constant-pool-count collect
-                        (read-constant-pool-entry stream))))
+    (let ((index 1)
+          entries current)
+
+      (loop
+         do
+           (setf current (read-constant-pool-entry stream))
+           (incf index (length current))
+           (push current entries)
+         until
+           (>= index constant-pool-count))
+
+      (setf entries (nreverse (loop for entry in entries nconc entry)))
+
       (setf constants
             (make-array `(,(length entries))
                         :initial-contents entries)))
