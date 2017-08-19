@@ -110,10 +110,12 @@
                              table)))
 
 
-(defun java-super-class-name (class-info)
+(defun java-super-class-name (class-info &optional (objectp t))
   (let ((c (aref (class-constants class-info) (class-super-index class-info))))
     (assert (java-class-reference-p c))
-    (constant-string-value c (class-constants class-info))))
+    (let ((s (constant-string-value c (class-constants class-info))))
+      (when (or objectp (not (string= "java/lang/Object" s)))
+        s))))
 
 (defun java-class-name (class-info)
   (let ((c (aref (class-constants class-info) (class-this-index class-info))))
@@ -145,7 +147,28 @@
                  (class-constants class)))
 
 
+(defun string-constant (class index)
+  (let  ((cr (aref (class-constants class) index)))
+    (cond ((and (consp cr)
+                (eq (first cr) :string))
+           (second cr))
 
+          ((consp cr)
+           (string-constant class (second cr)))
+
+
+          (t
+           cr))))
+
+
+(defun class-label (class)
+  "Produce a short label describing the class"
+  (let ((interfaces (class-interfaces class)))
+    (format nil "~a~@[ extends ~a~@[ implements ~{~a~^, ~}~]~]"
+            (java-class-name class)
+            (java-super-class-name class nil)
+            (loop for i in interfaces
+               collect (string-constant class i)))))
 
 (defun dot-graph (classes &optional (path "graph.dot"))
   (with-open-file (out path
