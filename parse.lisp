@@ -1,6 +1,5 @@
 
-(ql:quickload 'ieee-floats)
-
+(in-package :java-parse)
 
 (defun read-chunk (stream &optional (count 512))
   "Rpead a chunk of unsigned bytes from a file stream. START can be negative and indicates
@@ -30,10 +29,6 @@ an offset from the end of the file"
          do (setf (aref buffer i) 0))
       
       buffer)))
-
-
-(defparameter example-chunk (read-chunk-from-file "Main.class"))
-
 
 
 (defun asciip (x)
@@ -71,16 +66,6 @@ an offset from the end of the file"
 
     (reverse result)))
 
-
-(let ((foo ))
-  (make-array `(,(length foo)) :initial-contents foo))
-
-
-(find-strings (loop for c across (read-chunk-from-file "Main.class") collect c))
-
-(mapcar #'first opcodes)
-
-(first opcodes)
 
 (defparameter magic-number #xcafebabe
   "Java magic number")
@@ -302,29 +287,6 @@ ored together. BIG ENDIAN twos complement"
     `(:method ,access-flags ,name-index ,descriptor-index ,attributes)))
 
 
-(defclass java-class ()
-  ((major :accessor class-major-version
-          :initarg :major)
-   (minor :accessor class-minor-version
-          :initarg :minor)
-   (constants :accessor class-constants
-              :initarg :constants)
-   (access-flags :accessor class-access-flags
-                 :initarg :access-flags)
-   (interfaces :accessor class-interfaces
-               :initarg :interfaces)
-   (fields :accessor class-fields
-           :initarg :fields)
-   (methods :accessor class-methods
-            :initarg :methods)
-   (attributes :accessor class-attributes
-               :initarg :attributes)
-   (this-class-index :accessor class-this-index
-                  :initarg :this-index)
-   (super-class-index :accessor class-super-index
-                  :initarg :super-index))
-  (:documentation "Represents a java class file"))
-
 ;; See https://en.wikipedia.org/wiki/Class_(file_format)#File_layout_and_structure
 (defun parse-class-stream (stream)
   (declare (optimize debug))
@@ -362,23 +324,18 @@ ored together. BIG ENDIAN twos complement"
     ;; Constant pool count 2 bytes
     (setf constant-pool-count (read-unsigned-int stream 2))
     (let ((index 1)
-          entries current)
+          (entries (make-array (list constant-pool-count)
+                               :initial-element nil)))
 
       (loop
          do
-           (setf current (read-constant-pool-entry stream))
-           (incf index (length current))
-           (push current entries)
+           (loop for item in (read-constant-pool-entry stream) do
+                (setf (aref entries index) item)
+                (incf index))
          until
            (>= index constant-pool-count))
 
-      (assert (eql (length entries) (1- constant-pool-count)))
-      
-      (setf entries (nreverse (loop for entry in entries nconc entry)))
-
-      (setf constants
-            (make-array `(,(length entries))
-                        :initial-contents entries)))
+      (setf constants entries))
     
 
 
@@ -449,65 +406,3 @@ ored together. BIG ENDIAN twos complement"
 
     `(:code ,name-index ,attr-length ,max-stack ,max-locals ,code ,exception-table ,attrs)))
 
-
-(defclass java-method ()
-  ((access-flags :accessor method-access-flags
-                 :initarg :access-flags)
-   (name :accessor method-name
-         :initarg :name)
-   (descriptor :accessor method-descriptor
-               :initarg :descriptor)
-   (attributes :accessor method-attributes
-               :initarg :attributes))
-  (:documentation "Represents a method of a Java class"))
-
-
-
-(defvar class-access-flag-alist
-  '((:public . #x0001)
-    (:final . #x0010)
-    (:super . #x0020)
-    (:interface . #x0200)
-    (:abstract . #x0400)
-    (:synthetic . #x1000)
-    (:annotation . #x2000)
-    (:enum . #x4000))
-  "Constants from Java VM Spec document (access flags classes)")
-
-
-(defvar field-access-flag-alist
-  '((:public . #x0001)
-    (:private . #x0002)
-    (:protected . #x0004)
-    (:static . #x0008)
-    (:final . #x0010)
-    (:volatile . #x0040)
-    (:transient . #x0080)
-    (:synthetic . #x1000)
-    (:enum . #x4000))
-  "Constants from Java VM Spec document (access flags for fields)")
-
-
-(defvar method-access-flag-alist
-  '((:public . #x0001)
-    (:private . #x0002)
-    (:protected . #x0004)
-    (:static . #x0008)
-    (:final . #x0010)
-    (:synchronized . #x0020)
-    (:bridge . #x0040)
-    (:varargs . #x0080)
-    (:native . #x0100)
-    (:abstract . #x0400)
-    (:strict . #x0800)
-    (:synthetic . #x1000)
-    )
-  "Constants from Java VM Spec document (access flags for methods)")
-
-(defun decode-class-access-flags (flags)
-  (loop for pair in class-access-flag-alist
-     when (not (zerop (logand flags (cdr pair)))) collect (car pair)))
-
-(defun decode-field-access-flags (flags)
-  (loop for pair in field-access-flag-alist
-       when (not (zerop (logand flags (cdr pair)))) collect (car pair)))
