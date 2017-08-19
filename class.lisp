@@ -181,11 +181,24 @@
   "Some of the class references will be to arrays. This predicate finds them"
   (string= "[" string :end2 1))
 
+
 (defun dot-graph (classes &optional (path "graph.dot") (ignore-missing nil))
   (with-open-file (out path
                        :direction :output
                        :if-exists :supersede)
-    (let ((names (mapcar #'java-class-name classes)))
+    (let ((names (mapcar #'java-class-name classes))
+
+          ;; TODO use
+          (refs (quote (mapcar #'referenced-classes classes))))
+
+      ;; TODO:
+      (quote
+       (loop for g in (subgraphs (loop for i from 0 below (length names))
+                                 (delabel-edges names refs))
+          do
+            (format out "digraph {~% node [shape=box, color=blue]~%rankdir=TB~%")
+            ()
+            (format out "~%}~%")))
       
       (format out "digraph class_diagram {~% node [shape=box, color=blue]~%rankdir=TB~%")
       
@@ -211,6 +224,40 @@
       (format out "~%}~%"))))
 
 
+(defun delabel-edges (nodes edges)
+  "Go from a graph of string nodes to a graph of integer nodes"
+  (loop for node-edges in edges collect
+       (loop for neighbor in node-edges
+          when
+            (search (list neighbor) nodes :test #'string=)
+          collect
+            (search (list neighbor) nodes :test #'string=))))
+
+
+(defun visited-nodes (start-node edges &optional (visited nil))
+  "Compute all the nodes that can be visited from start-node by following edges"
+  (remove-duplicates (cons start-node
+                           (loop for neighbor in (nth start-node edges)
+                              when (not (find neighbor visited :test #'equal))
+                              nconc (visited-nodes neighbor edges (list start-node))))
+   :test #'equal))
+
+
+(defun subgraphs (nodes edges)
+  "Convert a graph represented as a list of nodes and a list of edges
+into a list of node subsets"
+  (let ((queue nodes)
+        gs)
+
+    (loop do
+         (let ((subgraph (visited-nodes (pop queue) edges)))
+           (push subgraph gs)
+           (setf queue (set-difference queue subgraph :test #'equal)))
+       until
+         (endp queue))
+
+    gs))
+    
 
 (defun svg-dot-graph (classes &optional (path "graph.svg"))
   "Helper that produces an svg image from a list of classes"
@@ -218,7 +265,7 @@
     (dot-graph classes dot-name)
     (unless (zerop (sb-ext:process-exit-code
                     (sb-ext:run-program "dot"
-                                        `("-Granksep=2.0" "-Tsvg" "-o" ,path "-Nmargin=0.3,0.2" ,dot-name)
+                                        `("-Granksep=2.0" "-Nfontsize=25" "-Tsvg" "-o" ,path "-Nmargin=0.3,0.2" ,dot-name)
                                         :search t)))
       (error "Failed to generate graph"))))
 
