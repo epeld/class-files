@@ -170,6 +170,7 @@
             (loop for i in interfaces
                collect (string-constant class i)))))
 
+
 (defun dot-graph (classes &optional (path "graph.dot"))
   (with-open-file (out path
                        :direction :output
@@ -194,5 +195,15 @@
       (format out "~%}~%"))))
 
 
-;; dot -Granksep=2.0 -Gortho -Tsvg graph.dot -o test.svg -Nmargin="0.3,0.2"
-;; (dot-graph (mapcar #'cdr test-classes))
+
+(defun svg-dot-graph (classes &optional (path "graph.svg"))
+  "Helper that produces an svg image from a list of classes"
+  (let ((dot-name "temp.dot"))
+    (dot-graph classes dot-name)
+    (unless (zerop (sb-ext:process-exit-code
+                    (sb-ext:run-program "dot"
+                                        `("-Granksep=2.0" "-Tsvg" "-o" ,path "-Nmargin=0.3,0.2" ,dot-name)
+                                        :search t)))
+      (error "Failed to generate graph"))))
+
+;;(svg-dot-graph test-classes)
