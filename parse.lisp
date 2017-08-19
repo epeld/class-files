@@ -253,13 +253,31 @@ ored together. BIG ENDIAN twos complement"
     `(:utf8 ,tag ,(read-length-string stream))))
 
 
+(defun parse-code-attribute (stream constants)
+  (declare (optimize debug))
+  (let* ((max-stack (read-unsigned-int stream 2))
+         (max-locals (read-unsigned-int stream 2))
+         (code-length (read-unsigned-int stream 4))
+         (code (read-chunk stream code-length))
+         (exception-table-length (read-unsigned-int stream 2))
+         (exception-table (loop for i from 1 upto exception-table-length collect (read-exception-table-entry stream)))
+         (attr-count (read-unsigned-int stream 2))
+         (attrs (loop for i from 1 upto attr-count collect (read-attribute stream constants))))
+
+    `(:code (:max-stack ,max-stack)
+            (:max-locals ,max-locals)
+            (:exceptions ,exception-table)
+            ,attrs
+            ,code)))
+
+
 (defun read-attribute (stream constants)
   ;;(declare (optimize debug))
   (let ((name (string-constant constants (read-unsigned-int stream 2)))
         (length (read-unsigned-int stream 4)))
 
     (cond ((string= name "Code")
-           `(:code ,(read-chunk stream length)))
+           (parse-code-attribute stream constants))
 
           ((string= name "SourceFile")
            `(:source-file ,(string-constant constants (read-unsigned-int stream 2))))
@@ -409,17 +427,4 @@ ored together. BIG ENDIAN twos complement"
     `(:exception-table-entry ,start-pc ,end-pc ,handler-pc ,catch-type)))
 
 
-(defun parse-code-attribute (stream constants)
-  (let* ((name-index (read-unsigned-int stream 2))
-         (attr-length (read-unsigned-int stream 4))
-         (max-stack (read-unsigned-int stream 2))
-         (max-locals (read-unsigned-int stream 2))
-         (code-length (read-unsigned-int stream 4))
-         (code (read-chunk stream code-length))
-         (exception-table-length (read-unsigned-int stream 2))
-         (exception-table (loop for i from 1 upto exception-table-length collect (read-exception-table-entry stream)))
-         (attr-count (read-unsigned-int stream 2))
-         (attrs (loop for i from 1 upto attr-count collect (read-attribute stream constants))))
-
-    `(:code ,name-index ,attr-length ,max-stack ,max-locals ,code ,exception-table ,attrs)))
 
