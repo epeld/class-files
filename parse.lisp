@@ -298,7 +298,10 @@ ored together. BIG ENDIAN twos complement"
          (attributes (loop for i from 1 upto attributes-count collect
                           (read-attribute stream constants))))
 
-    `(:method ,access-flags ,name-index ,descriptor-index ,attributes)))
+    `(:method ,(decode-method-access-flags access-flags)
+       ,(string-constant constants name-index)
+       ,(decode-type-descriptor (string-constant constants descriptor-index))
+       ,attributes)))
 
 
 ;; See https://en.wikipedia.org/wiki/Class_(file_format)#File_layout_and_structure

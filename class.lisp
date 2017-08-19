@@ -77,13 +77,18 @@
     )
   "Constants from Java VM Spec document (access flags for methods)")
 
-(defun decode-class-access-flags (flags)
-  (loop for pair in class-access-flag-alist
+(defun decode-access-flags (flags flag-alist)
+  (loop for pair in flag-alist
      when (not (zerop (logand flags (cdr pair)))) collect (car pair)))
 
+(defun decode-class-access-flags (flags)
+  (decode-access-flags flags class-access-flag-alist))
+
 (defun decode-field-access-flags (flags)
-  (loop for pair in field-access-flag-alist
-       when (not (zerop (logand flags (cdr pair)))) collect (car pair)))
+  (decode-access-flags flags field-access-flag-alist))
+
+(defun decode-method-access-flags (flags)
+  (decode-access-flags flags method-access-flag-alist))
 
 
 (defun java-class-reference-p (c)
@@ -285,21 +290,8 @@ into a list of node subsets"
        (strings c (mapcar #'second (fifth m)))))
 |#
 
-;; (class-fields (first test-classes))
-
-(defun decode-type-descriptor (desc)
-  "Tries to decode java type signature strings"
-  (ecase (aref desc 0)
-    (#\[
-     `(:array-of ,(decode-type-descriptor (subseq desc 1))))
-
-    (#\(
-     `(:method ,(subseq desc 1)))
-
-    (#\L
-     `(:class ,(loop for i from 1 until (eq #\; (aref desc i))
-                  finally (return (subseq desc 1 i)))))
-
+(defun decode-primitive-type (c)
+  (ecase c
     (#\Z
      :boolean)
 
@@ -316,4 +308,52 @@ into a list of node subsets"
      :char)
 
     (#\J
-     :long)))
+     :long)
+
+    (#\V
+     :void)))
+
+(defun decode-type-descriptor (desc)
+  "Tries to decode java type signature strings"
+  (let ((c (aref desc 0)))
+    (cond
+      ;; Array
+      ((eq c #\[)
+       (multiple-value-bind (type incr) (decode-type-descriptor (subseq desc 1))
+         (values `(:array-of ,type)
+                 (1+ incr))))
+
+      ;; Method
+      ((eq c #\()
+       (let ((i 1)
+             args r)
+         ;; Args
+         (loop until (eq #\) (aref desc i)) do
+              (multiple-value-bind (type incr) (decode-type-descriptor (subseq desc i))
+                (incf i incr)
+                (push type args)))
+
+         ;; Skip the closing #\)
+         (incf i)
+         
+         ;; Return value
+         (multiple-value-bind (type incr) (decode-type-descriptor (subseq desc i))
+           (setf r type)
+           (incf i incr))
+
+         (values `(:method ,(reverse args) ,r) i)))
+
+      ;; Fully qualified class
+      ((eq c #\L)
+       (let ((name (loop for i from 1 until (eq #\; (aref desc i))
+                      finally (return (subseq desc 1 i)))))
+
+         ;; We add #\L and #\; to the length of the string
+         (values `(:class-instance ,name) (+ 2 (length name)))))
+
+      ;; Primitives
+      (t
+       (values (decode-primitive-type c) 1)))))
+
+
+(class-methods (second test-classes))
