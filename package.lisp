@@ -3,6 +3,11 @@
 (ql:quickload :flexi-streams)
 (ql:quickload 'ieee-floats)
 
+(defpackage :java
+  (:nicknames :java-class :java-parse :java-jar)
+  (:use :cl :ieee-floats :flexi-streams :zip))
+
+#|
 (defpackage :java-class
   (:use :cl)
   (:export :java-class
@@ -18,3 +23,4 @@
 (defpackage :java-jar
   (:use :cl :java-parse :java-class)
   (:export :read-jar))
+|#
