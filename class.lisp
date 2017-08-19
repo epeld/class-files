@@ -147,18 +147,23 @@
                  (class-constants class)))
 
 
-(defun string-constant (class index)
-  (let  ((cr (aref (class-constants class) index)))
+(defun string-constant (constants index)
+  (assert (the array constants))
+  (let  ((cr (aref constants index)))
     (cond ((and (consp cr)
                 (eq (first cr) :string))
            (second cr))
 
           ((consp cr)
-           (string-constant class (second cr)))
+           (string-constant constants (second cr)))
 
 
           (t
            cr))))
+
+
+(defun class-string-constant (class index)
+  (string-constant (class-constants class) index))
 
 
 (defun class-label (class)
@@ -168,7 +173,7 @@
             (java-class-name class)
             (java-super-class-name class nil)
             (loop for i in interfaces
-               collect (string-constant class i)))))
+               collect (class-string-constant class i)))))
 
 
 (defun standard-class-p (string)
@@ -269,4 +274,15 @@ into a list of node subsets"
                                         :search t)))
       (error "Failed to generate graph"))))
 
-(svg-dot-graph test-classes)
+;; (svg-dot-graph test-classes)
+
+(defun strings (class indexes)
+  (loop for ix in indexes collect (class-string-constant class ix)))
+
+#|
+(let ((c (first test-classes)))
+  (loop for m in (class-methods c) collect
+       (strings c (mapcar #'second (fifth m)))))
+|#
+
+(class-fields (first test-classes))

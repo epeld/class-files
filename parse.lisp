@@ -253,15 +253,26 @@ ored together. BIG ENDIAN twos complement"
     `(:utf8 ,tag ,(read-length-string stream))))
 
 
-(defun read-attribute (stream)
+(defun read-attribute (stream constants)
   ;;(declare (optimize debug))
-  (let ((name-index (read-unsigned-int stream 2))
+  (let ((name (string-constant constants (read-unsigned-int stream 2)))
         (length (read-unsigned-int stream 4)))
 
-    `(:attribute ,name-index ,(read-chunk stream length))))
+    (cond ((string= name "Code")
+           `(:code ,(read-chunk stream length)))
+
+          ((string= name "SourceFile")
+           `(:source-file ,(string-constant constants (read-unsigned-int stream 2))))
 
 
-(defun read-field (stream)
+          ((string= name "Exceptions")
+           `(:exceptions ,(loop for i from 0 below (read-unsigned-int stream 2)
+                               collect (string-constant constants (read-unsigned-int stream 2)))))
+          (t
+           `(:attribute ,name ,(read-chunk stream length))))))
+
+
+(defun read-field (stream constants)
   "Read a field_info structure"
 ;;  (declare (optimize debug))
   (let* ((access-flags (read-unsigned-int stream 2))
@@ -270,19 +281,19 @@ ored together. BIG ENDIAN twos complement"
          (attributes-count (read-unsigned-int stream 2))
          ;;(foo (break "HERE"))
          (attributes (loop for i from 1 upto attributes-count collect
-                          (read-attribute stream))))
+                          (read-attribute stream constants))))
 
     `(:field ,access-flags ,name-index ,descriptor-index ,attributes)))
 
 
-(defun read-method (stream)
+(defun read-method (stream constants)
   "Read a method_info structure"
   (let* ((access-flags (read-unsigned-int stream 2))
          (name-index (read-unsigned-int stream 2))
          (descriptor-index (read-unsigned-int stream 2))
          (attributes-count (read-unsigned-int stream 2))
          (attributes (loop for i from 1 upto attributes-count collect
-                          (read-attribute stream))))
+                          (read-attribute stream constants))))
 
     `(:method ,access-flags ,name-index ,descriptor-index ,attributes)))
 
@@ -356,16 +367,16 @@ ored together. BIG ENDIAN twos complement"
 
     (setf fields-count (read-unsigned-int stream 2))
     (setf fields
-          (loop for i from 1 upto fields-count collect (read-field stream)))
+          (loop for i from 1 upto fields-count collect (read-field stream constants)))
 
     (setf methods-count (read-unsigned-int stream 2))
     (setf methods
-          (loop for i from 1 upto methods-count collect (read-method stream)))
+          (loop for i from 1 upto methods-count collect (read-method stream constants)))
 
 
     (setf attributes-count (read-unsigned-int stream 2))
     (setf attributes
-          (loop for i from 1 upto attributes-count collect (read-attribute stream)))
+          (loop for i from 1 upto attributes-count collect (read-attribute stream constants)))
 
     (make-instance 'java-class
                    :major major
@@ -392,7 +403,7 @@ ored together. BIG ENDIAN twos complement"
     `(:exception-table-entry ,start-pc ,end-pc ,handler-pc ,catch-type)))
 
 
-(defun parse-code-attribute (stream)
+(defun parse-code-attribute (stream constants)
   (let* ((name-index (read-unsigned-int stream 2))
          (attr-length (read-unsigned-int stream 4))
          (max-stack (read-unsigned-int stream 2))
@@ -402,7 +413,7 @@ ored together. BIG ENDIAN twos complement"
          (exception-table-length (read-unsigned-int stream 2))
          (exception-table (loop for i from 1 upto exception-table-length collect (read-exception-table-entry stream)))
          (attr-count (read-unsigned-int stream 2))
-         (attrs (loop for i from 1 upto attr-count collect (read-attribute stream))))
+         (attrs (loop for i from 1 upto attr-count collect (read-attribute stream constants))))
 
     `(:code ,name-index ,attr-length ,max-stack ,max-locals ,code ,exception-table ,attrs)))
 
