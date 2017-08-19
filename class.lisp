@@ -171,7 +171,17 @@
                collect (string-constant class i)))))
 
 
-(defun dot-graph (classes &optional (path "graph.dot"))
+(defun standard-class-p (string)
+  "Very simple heuristic predicate for determining if a class is a builtin java class"
+  (or (search "java/" string)
+      (search "javax/" string)))
+
+
+(defun array-class-p (string)
+  "Some of the class references will be to arrays. This predicate finds them"
+  (string= "[" string :end2 1))
+
+(defun dot-graph (classes &optional (path "graph.dot") (ignore-missing nil))
   (with-open-file (out path
                        :direction :output
                        :if-exists :supersede)
@@ -188,6 +198,12 @@
            (loop for ref in (referenced-classes class) do
                 (let ((ref-ix (search (list ref)
                                       names :test #'string=)))
+                  (unless (or ignore-missing
+                              ref-ix
+                              (standard-class-p ref)
+                              (array-class-p ref))
+                    (cerror "Ignore" "Class ~a missing" ref))
+                  
                   (when (and ref-ix
                              (not (eq ref-ix class-ix)))
                     (format out "C_~a -> C_~a~%" class-ix
@@ -206,4 +222,4 @@
                                         :search t)))
       (error "Failed to generate graph"))))
 
-;;(svg-dot-graph test-classes)
+(svg-dot-graph test-classes)
