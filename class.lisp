@@ -285,4 +285,35 @@ into a list of node subsets"
        (strings c (mapcar #'second (fifth m)))))
 |#
 
-(class-fields (first test-classes))
+;; (class-fields (first test-classes))
+
+(defun decode-type-descriptor (desc)
+  "Tries to decode java type signature strings"
+  (ecase (aref desc 0)
+    (#\[
+     `(:array-of ,(decode-type-descriptor (subseq desc 1))))
+
+    (#\(
+     `(:method ,(subseq desc 1)))
+
+    (#\L
+     `(:class ,(loop for i from 1 until (eq #\; (aref desc i))
+                  finally (return (subseq desc 1 i)))))
+
+    (#\Z
+     :boolean)
+
+    (#\B
+     :byte)
+
+    (#\I
+     :integer)  
+
+    (#\S
+     :short)
+
+    (#\C
+     :char)
+
+    (#\J
+     :long)))

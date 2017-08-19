@@ -283,7 +283,10 @@ ored together. BIG ENDIAN twos complement"
          (attributes (loop for i from 1 upto attributes-count collect
                           (read-attribute stream constants))))
 
-    `(:field ,access-flags ,name-index ,descriptor-index ,attributes)))
+    `(:field ,(decode-field-access-flags access-flags)
+             ,(string-constant constants name-index)
+             ,(decode-type-descriptor (string-constant constants descriptor-index))
+             ,attributes)))
 
 
 (defun read-method (stream constants)
