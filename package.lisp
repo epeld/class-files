@@ -6,7 +6,7 @@
 (defpackage :java
   (:nicknames :java-class :java-parse :java-jar)
   (:use :cl :ieee-floats :flexi-streams :zip)
-  (:export :read-jar))
+  (:export :read-jar :java-class-name))
 
 
 (ql:quickload :hunchentoot)
