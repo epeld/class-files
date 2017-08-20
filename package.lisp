@@ -5,13 +5,15 @@
 
 (defpackage :java
   (:nicknames :java-class :java-parse :java-jar)
-  (:use :cl :ieee-floats :flexi-streams :zip))
+  (:use :cl :ieee-floats :flexi-streams :zip)
+  (:export :read-jar))
 
 
 (ql:quickload :hunchentoot)
+(ql:quickload :cl-who)
 
 (defpackage :server
-  (:use :cl :hunchentoot))
+  (:use :cl :hunchentoot :cl-who :java))
 
 #|
 (defpackage :java-class
