@@ -310,6 +310,12 @@ into a list of node subsets"
     (#\J
      :long)
 
+    (#\F
+     :float)
+
+    (#\D
+     :double)
+
     (#\V
      :void)))
 
