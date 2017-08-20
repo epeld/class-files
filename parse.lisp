@@ -81,7 +81,6 @@ an offset from the end of the file"
 (defun read-unsigned-int (stream count)
   "Read an unsigned integer from the stream, consisting of COUNT shifted unsigned bytes
 ored together. BIG ENDIAN"
-  (declare (optimize debug))
   (let ((buffer (make-array `(,count)
                             :element-type '(unsigned-byte 8))))
     (unless (eql count (read-sequence buffer stream :end count))
