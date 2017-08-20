@@ -1,6 +1,8 @@
 
 (in-package :java-parse)
 
+(loop for op in raw-opcodes when (search "invoke" (first op)) collect op)
+
 (defvar raw-opcodes nil
   "Cached list of opcodes")
 
@@ -21,7 +23,7 @@
             .
             ,(lispify-opcode-mnemonic (first opcode))))))
 
-(defvar opcode-alist (parse-opcodes))
+(defparameter opcode-alist (parse-opcodes))
 
 (defun opcode-string (opcode)
   "Translate an opcode number to its mnemonic string value"
@@ -38,6 +40,7 @@
       (cerror "Ignore" "Unknown opcode mnemonic ~a" string))
     op))
 
+
 (defun parse-operand-string (string)
   (unless (zerop (length string))
     (let ((nr (subseq string 0 (search '(#\:) string))))
@@ -50,6 +53,7 @@
 (defun operand-string-special-case-p (string)
   (or (find #\+ string)
       (find #\/ string)))
+
 
 (defparameter operand-special-cases
   (loop for op in raw-opcodes
@@ -84,13 +88,15 @@
   (let* ((opcode (read-unsigned-int stream 1))
          (operands (opcode-operand-count opcode)))
 
-    (unless (find opcode operand-special-cases)
-      `(,(opcode-string opcode) ,@(loop for i from 1 upto operands collect
+    (if (find opcode operand-special-cases)
+        (error "Special case operands not supported yet")
+        `(,(opcode-string opcode) ,@(loop for i from 1 upto operands collect
                                        (read-unsigned-int stream 1))))))
 
 
 (defparameter code-example #(42 43 3 43 190 182 0 16 172))
 
+;; (parse-instructions code-example)
 
 (defun parse-instructions (machine-code)
   "Given a sequence of machine codes, parse it into 'human readable' form"
@@ -111,6 +117,15 @@
              (if (eq (aref string i) #\_)
                  #\-
                  (aref string i))))
-  (intern (string-upcase string)
-          (find-package "KEYWORD")))
+  (intern (string-upcase string)))
+
+
+(defparameter invoking-opcodes
+  (loop for op in raw-opcodes when (search "invoke" (first op)) collect (lispify-opcode-mnemonic (first op))))
+
+(defparameter storing-opcodes
+  (loop for op in raw-opcodes when (search "store" (first op)) collect (lispify-opcode-mnemonic (first op))))
+
+(defparameter loading-opcodes
+  (loop for op in raw-opcodes when (search "load" (first op)) collect (lispify-opcode-mnemonic (first op))))
 
