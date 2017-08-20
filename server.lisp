@@ -66,8 +66,34 @@
     (:div "You can add more classes by uploading jar-files on " (:a :href "/" "the index-page"))
     (:ul
      (loop for c in known-classes do
-          (htm (:li (:a :href (str (format nil "/~a" (java-class-name c))) (str (java-class-name c)))))))))
+          (htm (:li (:a :href (str (format nil "/class/~a" (java-class-name c))) (str (java-class-name c)))))))))
 
 
 
-;; TODO write a handler for viewing an individual class!
+(defun render-not-found-page ()
+  (with-html-output-to-string (s)
+    (:h1 "404 - Not Found")
+    (:a :href "/classes" "Back to Class List")))
+
+(defun render-class-page (class)
+  (with-html-output-to-string (s)
+    (:h1 (str (java-class-name class)))
+    (:a :href "/classes" "Back to Class List")))
+
+(defun class-handler ()
+  (when (search "/class/" (request-uri*) :end2 (length "/class/"))
+    (let* ((name (subseq (request-uri*) (length "/class/")))
+           (class (find name known-classes :key #'java-class-name :test #'string=)))
+      (if class
+          (render-class-page class)
+          (render-not-found-page)))))
+
+
+(defun my-handler ()
+  (class-handler))
+
+
+(defvar class-dispatcher
+  (create-prefix-dispatcher "/class/" #'my-handler))
+
+(pushnew class-dispatcher *dispatch-table*)
