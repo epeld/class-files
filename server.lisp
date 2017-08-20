@@ -35,6 +35,9 @@
                                known-classes
                                :key #'java-class-name
                                :test #'string=))
+
+    (setf known-classes (sort known-classes #'string<= :key #'java-class-name))
+    
     (- (length known-classes)
        len)))
 
