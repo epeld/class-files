@@ -39,7 +39,7 @@
        len)))
 
 
-(hunchentoot:define-easy-handler (say-yo :uri "/") (jar-file)
+(hunchentoot:define-easy-handler (home :uri "/home") (jar-file)
   (let ((num-known (length known-classes)))
     (cl-who:with-html-output-to-string (s)
       (:h1 "Hello")
@@ -60,10 +60,10 @@
              (:input :type "submit" :name "upload" :value "Upload")))))
 
 
-(hunchentoot:define-easy-handler (say-yo :uri "/classes") ()
+(hunchentoot:define-easy-handler (class-list :uri "/classes") ()
   (cl-who:with-html-output-to-string (s)
     (:h1 "List of Known Classes")
-    (:div "You can add more classes by uploading jar-files on " (:a :href "/" "the index-page"))
+    (:div "You can add more classes by uploading jar-files on " (:a :href "/home" "the index-page"))
     (:ul
      (loop for c in known-classes do
           (htm (:li (:a :href (str (format nil "/class/~a" (java-class-name c))) (str (java-class-name c)))))))))
