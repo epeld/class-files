@@ -341,7 +341,7 @@ into a list of node subsets"
            (setf r type)
            (incf i incr))
 
-         (values `(:method ,(reverse args) ,r) i)))
+         (values `(:method-signature ,(reverse args) ,r) i)))
 
       ;; Fully qualified class
       ((eq c #\L)
