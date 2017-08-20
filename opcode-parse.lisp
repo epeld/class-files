@@ -19,7 +19,7 @@
     (loop for opcode in codes collect
          `(,(parse-integer (second opcode) :radix 16)
             .
-            ,(first opcode)))))
+            ,(lispify-opcode-mnemonic (first opcode))))))
 
 (defvar opcode-alist (parse-opcodes))
 
@@ -102,4 +102,15 @@
          until
            (null (car codes)))
       (reverse (cdr codes)))))
+
+
+(defun lispify-opcode-mnemonic (string)
+  "Convert an opcode mnemonic into a keyword"
+  (loop for i from 0 below (length string) do
+       (setf (aref string i)
+             (if (eq (aref string i) #\_)
+                 #\-
+                 (aref string i))))
+  (intern (string-upcase string)
+          (find-package "KEYWORD")))
 
