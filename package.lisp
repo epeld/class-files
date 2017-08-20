@@ -7,6 +7,12 @@
   (:nicknames :java-class :java-parse :java-jar)
   (:use :cl :ieee-floats :flexi-streams :zip))
 
+
+(ql:quickload :hunchentoot)
+
+(defpackage :server
+  (:use :cl :hunchentoot))
+
 #|
 (defpackage :java-class
   (:use :cl)
