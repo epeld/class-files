@@ -43,17 +43,19 @@
 
 
 (hunchentoot:define-easy-handler (home :uri "/home") (jar-file)
-  (let ((num-known (length known-classes)))
+  (let ((num-known (length known-classes))
+        (num-loaded (if jar-file (load-jar (first jar-file)) 0)))
+      
     (cl-who:with-html-output-to-string (s)
       (:h1 "Hello")
-      (unless (zerop num-known)
-        (htm (:div (str (format nil "~a known java classes. " num-known))
+      (unless (zerop (+ num-loaded num-known))
+        (htm (:div (str (format nil "~a known java classes. " (+ num-loaded num-known)))
                    (:a :href "/classes" "View the Class List!"))))
       (:div )
       (:div "To add classes, please POST a jar file below and you will receive info")
       (:hr)
       (when jar-file
-        (htm (:p (str (format nil "Jar file ~s loaded (~a new classes)~%" (second jar-file) (load-jar (first jar-file)))))
+        (htm (:p (str (format nil "Jar file ~s loaded (~a new classes)~%" (second jar-file) num-loaded)))
              (:hr)))
       (:form :name "file-upload"
              :method "post"
@@ -72,16 +74,32 @@
           (htm (:li (:a :href (str (format nil "/class/~a" (java-class-name c))) (str (java-class-name c)))))))))
 
 
-
 (defun render-not-found-page ()
   (with-html-output-to-string (s)
     (:h1 "404 - Not Found")
     (:a :href "/classes" "Back to Class List")))
 
+
 (defun render-class-page (class)
   (with-html-output-to-string (s)
     (:h1 (str (java-class-name class)))
-    (:a :href "/classes" "Back to Class List")))
+    (:a :href "/classes" "Back to Class List")
+    (:hr)
+    (:div
+     (:h2 "Fields")
+     (:ul
+      (loop for f in (class-fields class) do
+           (htm (:li (:b (str (escape-string (field-name f))))
+                     (str " - ")
+                     (str (escape-string (field-info-string f))))))))
+    (:div
+     (:h2 "Methods")
+     (:ul
+      (loop for m in (class-methods class) do
+           (htm (:li (:b (str (escape-string (method-name m))))
+                     (str " - ")
+                     (str (escape-string (method-info-string m))))))))))
+
 
 (defun class-handler ()
   (when (search "/class/" (request-uri*) :end2 (length "/class/"))

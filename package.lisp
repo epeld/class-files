@@ -6,7 +6,21 @@
 (defpackage :java
   (:nicknames :java-class :java-parse :java-jar)
   (:use :cl :ieee-floats :flexi-streams :zip)
-  (:export :read-jar :java-class-name))
+  (:export :read-jar
+           :java-class-name
+
+           :class-fields
+           :class-methods
+
+           :field-info-string
+           :field-access-flags
+           :field-name
+           :field-type-descriptor
+
+           :method-info-string
+           :method-access-flags
+           :method-name
+           :method-type-descriptor))
 
 
 (ql:quickload :hunchentoot)

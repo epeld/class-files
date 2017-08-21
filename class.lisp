@@ -30,11 +30,24 @@
                  :initarg :access-flags)
    (name :accessor method-name
          :initarg :name)
-   (descriptor :accessor method-descriptor
+   (descriptor :accessor method-type-descriptor
                :initarg :descriptor)
    (attributes :accessor method-attributes
                :initarg :attributes))
   (:documentation "Represents a method of a Java class"))
+
+
+(defclass java-field ()
+  ((access-flags :accessor field-access-flags
+                 :initarg :access-flags)
+   (name :accessor field-name
+         :initarg :name)
+   (descriptor :accessor field-type-descriptor
+               :initarg :descriptor)
+   (attributes :accessor field-attributes
+               :initarg :attributes))
+  (:documentation "Represents a field in a Java class"))
+
 
 (defvar class-access-flag-alist
   '((:public . #x0001)
@@ -362,4 +375,32 @@ into a list of node subsets"
        (values (decode-primitive-type c) 1)))))
 
 
-(class-methods (second test-classes))
+(defun human-readable-type-string (type)
+  (cond ((keywordp type)
+         (string-downcase type))
+
+        ((and (consp type)
+              (eq (first type) :class-instance))
+         (second type))
+
+        (t (format nil "~a" type))))
+
+
+(defun method-info-string (method)
+  (let* ((td (method-type-descriptor method))
+         (args (second (method-type-descriptor method))))
+    (assert (eq (first td) :method-signature))
+
+    (format nil "~(~{~a~^ ~}~) ~a ~a(~{~a~^, ~})"
+            (method-access-flags method)
+            (human-readable-type-string (car (last td)))
+            (method-name method)
+            (mapcar #'human-readable-type-string args))))
+
+
+(defun field-info-string (field)
+  (let* ((td (field-type-descriptor field)))
+    (format nil "~(~{~a~^ ~}~) ~a ~a"
+            (field-access-flags field)
+            (human-readable-type-string td)
+            (field-name field))))

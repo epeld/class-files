@@ -300,10 +300,12 @@ ored together. BIG ENDIAN twos complement"
          (attributes (loop for i from 1 upto attributes-count collect
                           (read-attribute stream constants))))
 
-    `(:field ,(decode-field-access-flags access-flags)
-             ,(string-constant constants name-index)
-             ,(decode-type-descriptor (string-constant constants descriptor-index))
-             ,attributes)))
+    (make-instance 'java-field
+                   :access-flags (decode-field-access-flags access-flags)
+                   :name (string-constant constants name-index)
+                   :attributes attributes
+                   :descriptor (decode-type-descriptor
+                                (string-constant constants descriptor-index)))))
 
 
 (defun read-method (stream constants)
@@ -315,10 +317,12 @@ ored together. BIG ENDIAN twos complement"
          (attributes (loop for i from 1 upto attributes-count collect
                           (read-attribute stream constants))))
 
-    `(:method ,(decode-method-access-flags access-flags)
-       ,(string-constant constants name-index)
-       ,(decode-type-descriptor (string-constant constants descriptor-index))
-       ,attributes)))
+    (make-instance 'java-method
+                   :access-flags (decode-method-access-flags access-flags)
+                   :name (string-constant constants name-index)
+                   :attributes attributes
+                   :descriptor (decode-type-descriptor
+                                (string-constant constants descriptor-index)))))
 
 
 ;; See https://en.wikipedia.org/wiki/Class_(file_format)#File_layout_and_structure
@@ -424,6 +428,4 @@ ored together. BIG ENDIAN twos complement"
          (handler-pc (read-unsigned-int stream 2))
          (catch-type (read-unsigned-int stream 2)))
     `(:exception-table-entry ,start-pc ,end-pc ,handler-pc ,catch-type)))
-
-
 
