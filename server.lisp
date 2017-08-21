@@ -82,11 +82,14 @@
 
 (defun render-class-page (class)
   (with-html-output-to-string (s)
+    
     (:h1 (str "Class Overview - ")
          (str (java-class-name class)))
     (:h3 (str (class-info-string class)))
     (:a :href "/classes" "Back to Class List")
+    
     (:hr)
+    
     (:div
      (:h2 "Fields")
      (:ul
@@ -100,7 +103,14 @@
       (loop for m in (class-methods class) do
            (htm (:li (:b (str (escape-string (method-name m))))
                      (str " - ")
-                     (str (escape-string (method-info-string m))))))))))
+                     (str (escape-string (method-info-string m))))))))
+    (:div
+     (:h2 "Referenced Classes")
+     (:ul
+      (loop for c in (referenced-classes class)
+           unless (standard-class-p c)
+         do
+           (htm (:li (:a :href (str (format nil "/class/~a" c)) (str c)))))))))
 
 
 (defun class-handler ()

@@ -419,5 +419,3 @@ into a list of node subsets"
             (field-access-flags field)
             (human-readable-type-string td)
             (field-name field))))
-
-

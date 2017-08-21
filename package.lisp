@@ -8,6 +8,9 @@
   (:use :cl :ieee-floats :flexi-streams :zip)
   (:export :read-jar
            :java-class-name
+           :referenced-classes
+           :system-class-p
+           :standard-class-p
 
            :class-info-string
            :class-fields
