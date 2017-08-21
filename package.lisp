@@ -21,6 +21,7 @@
            :field-name
            :field-type-descriptor
 
+           :method-parsed-machine-code
            :method-info-string
            :method-access-flags
            :method-name

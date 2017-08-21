@@ -419,3 +419,12 @@ into a list of node subsets"
             (field-access-flags field)
             (human-readable-type-string td)
             (field-name field))))
+
+
+
+(defun method-parsed-machine-code (method)
+  (let ((code (find-if (lambda (attr)
+                         (eq (first attr) :code))
+                       (method-attributes method))))
+    (parse-instructions (sixth code))))
+
