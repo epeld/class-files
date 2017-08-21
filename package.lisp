@@ -9,6 +9,7 @@
   (:export :read-jar
            :java-class-name
 
+           :class-info-string
            :class-fields
            :class-methods
 

@@ -104,6 +104,12 @@
   (decode-access-flags flags method-access-flag-alist))
 
 
+(defun class-interface-names (class)
+  (declare (optimize debug))
+  (the java-class class)
+  (loop for i in (class-interfaces class) collect (string-constant (class-constants class) i)))
+
+
 (defun java-class-reference-p (c)
   (eq (first c) :class-reference))
 
@@ -386,6 +392,15 @@ into a list of node subsets"
         (t (format nil "~a" type))))
 
 
+(defun class-info-string (class)
+  (declare (optimize debug))
+  (format nil "~(~{~a~^ ~}~) ~a ~@[extends ~a~]~@[ implements ~{~a~^, ~}~]"
+          (class-access-flags class)
+          (java-class-name class)
+          (java-super-class-name class)
+          (class-interface-names class)))
+
+
 (defun method-info-string (method)
   (let* ((td (method-type-descriptor method))
          (args (second (method-type-descriptor method))))
@@ -404,3 +419,5 @@ into a list of node subsets"
             (field-access-flags field)
             (human-readable-type-string td)
             (field-name field))))
+
+

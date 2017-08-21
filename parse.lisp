@@ -406,6 +406,7 @@ ored together. BIG ENDIAN twos complement"
           (loop for i from 1 upto attributes-count collect (read-attribute stream constants)))
 
     (make-instance 'java-class
+                   :access-flags (decode-class-access-flags access-flags)
                    :major major
                    :minor minor
                    :constants constants

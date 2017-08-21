@@ -82,7 +82,9 @@
 
 (defun render-class-page (class)
   (with-html-output-to-string (s)
-    (:h1 (str (java-class-name class)))
+    (:h1 (str "Class Overview - ")
+         (str (java-class-name class)))
+    (:h3 (str (class-info-string class)))
     (:a :href "/classes" "Back to Class List")
     (:hr)
     (:div
